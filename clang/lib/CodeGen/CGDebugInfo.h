@@ -171,7 +171,7 @@ class CGDebugInfo {
   Param2DILocTy ParamDbgMappings;
 
   /// Helper functions for getOrCreateType.
-  /// @{
+  // @{
   /// Currently the checksum of an interface includes the number of
   /// ivars and property accessors.
   llvm::DIType *CreateType(const BuiltinType *Ty);

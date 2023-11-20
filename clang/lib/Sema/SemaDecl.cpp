@@ -17983,6 +17983,8 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
                              Declarator &D, Expr *BitWidth,
                              InClassInitStyle InitStyle,
                              AccessSpecifier AS) {
+  llvm::errs() << "Sema::HandleField\n";
+
   if (D.isDecompositionDeclarator()) {
     const DecompositionDeclarator &Decomp = D.getDecompositionDeclarator();
     Diag(Decomp.getLSquareLoc(), diag::err_decomp_decl_context)
@@ -17996,6 +17998,9 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
 
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType T = TInfo->getType();
+
+  T.dump();
+
   if (getLangOpts().CPlusPlus) {
     CheckExtraCXXDefaultArguments(D);
 
@@ -18091,6 +18096,9 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                 SourceLocation TSSL,
                                 AccessSpecifier AS, NamedDecl *PrevDecl,
                                 Declarator *D) {
+  llvm::errs() << "Sema::CheckFieldDecl\n";
+  T.dump();
+
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   bool InvalidDecl = false;
   if (D) InvalidDecl = D->isInvalidType();
@@ -18267,6 +18275,22 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
+
+  if (true) {
+    const Type* TT = nullptr;
+    if (auto* P = dyn_cast<PointerType>(T))
+      TT = &*P->getPointeeType();
+    if (auto* R = dyn_cast<ReferenceType>(T))
+      TT = &*R->getPointeeType();
+
+    while (auto* E = dyn_cast_or_null<ElaboratedType>(TT))
+      TT = &*E->getNamedType();
+
+    if (isa_and_nonnull<TemplateSpecializationType>(TT)) {
+      llvm::errs() << "found one! " << TT->getTypeClassName() << "\n";
+      TT->dump();
+    }
+  }
 
   NewFD->setAccess(AS);
   return NewFD;
@@ -18708,6 +18732,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        const ParsedAttributesView &Attrs) {
   assert(EnclosingDecl && "missing record or interface decl");
 
+  llvm::errs() << "Sema::ActOnFields\n";
+  for (Decl* D : Fields)
+    D->dump();
+
   // If this is an Objective-C @implementation or category and we have
   // new fields here we should reset the layout of the interface since
   // it will now change.
@@ -18748,6 +18776,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     // Get the type for the field.
     const Type *FDTy = FD->getType().getTypePtr();
+
+    if (FDTy->isPointerType())
+      llvm::errs() << "is pointer\n";
 
     if (!FD->isAnonymousStructOrUnion()) {
       // Remember all fields written by the user.

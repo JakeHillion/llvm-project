@@ -2476,6 +2476,8 @@ void CGDebugInfo::completeType(const EnumDecl *ED) {
 }
 
 void CGDebugInfo::completeType(const RecordDecl *RD) {
+  llvm::errs() << "CGDebugInfo::completeType\n";
+  RD->dump();
   if (DebugKind > llvm::codegenoptions::LimitedDebugInfo ||
       !CGM.getLangOpts().CPlusPlus)
     completeRequiredType(RD);
@@ -2631,9 +2633,11 @@ static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,
       !isClassOrMethodDLLImport(CXXDecl))
     return true;
 
+  // TODO: Will it emit if this check is changed?
   TemplateSpecializationKind Spec = TSK_Undeclared;
-  if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+  if (auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
     Spec = SD->getSpecializationKind();
+  }
 
   if (Spec == TSK_ExplicitInstantiationDeclaration &&
       hasExplicitMemberDefinition(CXXDecl->method_begin(),
@@ -2656,7 +2660,7 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
   QualType Ty = CGM.getContext().getRecordType(RD);
   llvm::DIType *T = getTypeOrNull(Ty);
   if (T && T->isForwardDecl())
-    completeClassData(RD);
+    completeClass(RD);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
@@ -2728,8 +2732,9 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
 
   // Collect data fields (including static variables and any initializers).
   CollectRecordFields(RD, DefUnit, EltTys, FwdDecl);
-  if (CXXDecl)
+  if (CXXDecl) {
     CollectCXXMemberFunctions(CXXDecl, DefUnit, EltTys, FwdDecl);
+  }
 
   LexicalBlockStack.pop_back();
   RegionMap.erase(Ty->getDecl());
@@ -2737,9 +2742,10 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
   DBuilder.replaceArrays(FwdDecl, Elements);
 
-  if (FwdDecl->isTemporary())
+  if (FwdDecl->isTemporary()) {
     FwdDecl =
         llvm::MDNode::replaceWithPermanent(llvm::TempDICompositeType(FwdDecl));
+  }
 
   RegionMap[Ty->getDecl()].reset(FwdDecl);
 

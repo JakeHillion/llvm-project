@@ -66,6 +66,7 @@ namespace {
 
   private:
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
+    SmallVector<ClassTemplateSpecializationDecl *, 8> DeferredTemplateSpecializationDefs;
 
     static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
                                             const CodeGenOptions &CGO) {
@@ -193,16 +194,24 @@ namespace {
     }
 
     void EmitDeferredDecls() {
-      if (DeferredInlineMemberFuncDefs.empty())
+      if (DeferredInlineMemberFuncDefs.empty() && DeferredTemplateSpecializationDefs.empty())
         return;
 
       // Emit any deferred inline method definitions. Note that more deferred
       // methods may be added during this loop, since ASTConsumer callbacks
       // can be invoked if AST inspection results in declarations being added.
       HandlingTopLevelDeclRAII HandlingDecl(*this);
-      for (unsigned I = 0; I != DeferredInlineMemberFuncDefs.size(); ++I)
-        Builder->EmitTopLevelDecl(DeferredInlineMemberFuncDefs[I]);
+
+      unsigned I_m = 0;
+      unsigned I_t = 0;
+      while (I_m != DeferredInlineMemberFuncDefs.size() || I_t != DeferredTemplateSpecializationDefs.size()) {
+        if (I_m != DeferredInlineMemberFuncDefs.size())
+          Builder->EmitTopLevelDecl(DeferredInlineMemberFuncDefs[I_m++]);
+        if (I_t != DeferredTemplateSpecializationDefs.size())
+          Builder->EmitTopLevelDecl(DeferredTemplateSpecializationDefs[I_t++]);
+      }
       DeferredInlineMemberFuncDefs.clear();
+      DeferredTemplateSpecializationDefs.clear();
     }
 
     void HandleInlineFunctionDefinition(FunctionDecl *D) override {
@@ -233,6 +242,11 @@ namespace {
     /// client hack on the type, which can occur at any point in the file
     /// (because these can be defined in declspecs).
     void HandleTagDeclDefinition(TagDecl *D) override {
+      llvm::errs() << "CodeGeneratorImpl::HandleTagDeclDefinition\n";
+      D->dump();
+      if (isa<ClassTemplateSpecializationDecl>(D))
+        llvm::errs() << "hit me\n";
+
       if (Diags.hasErrorOccurred())
         return;
 
@@ -269,6 +283,8 @@ namespace {
     }
 
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+      llvm::errs() << "CodeGeneratorImpl::HandleTagDeclRequiredDefinition\n";
+      D->dump();
       if (Diags.hasErrorOccurred())
         return;
 

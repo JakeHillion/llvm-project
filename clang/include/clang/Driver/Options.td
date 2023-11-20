@@ -5827,6 +5827,10 @@ def debug_forward_template_params : Flag<["-"], "debug-forward-template-params">
   HelpText<"Emit complete descriptions of template parameters in forward"
            " declarations">,
   MarshallingInfoFlag<CodeGenOpts<"DebugFwdTemplateParams">>;
+def emit_template_debug_types_eagerly : Flag<["-"], "emit-template-debug-types-eagerly">,
+  HelpText<"Emit complete descriptions for templated types even when there"
+           " is no good reason">,
+  MarshallingInfoFlag<CodeGenOpts<"EmitTemplateDebugTypesEagerly">>;
 def fforbid_guard_variables : Flag<["-"], "fforbid-guard-variables">,
   HelpText<"Emit an error if a C++ static local initializer would need a guard variable">,
   MarshallingInfoFlag<CodeGenOpts<"ForbidGuardVariables">>;
